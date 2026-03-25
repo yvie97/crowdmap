@@ -1,7 +1,9 @@
 import sqlite3
 
+# Path to the SQLite database file (created automatically on first run)
 DB_PATH = "occupancy.db"
 
+# All area IDs - must match the IDs used in the frontend map
 AREA_IDS = [
     "area_225_2f_1",
     "area_225_2f_2",
@@ -9,18 +11,22 @@ AREA_IDS = [
     "area_225_2f_4",
 ]
 
+# Display name and max capacity for each area
+# Update names here if the frontend changes them
 AREA_META = {
-    "area_225_2f_1": {"name": "Area 1", "capacity": 20},
-    "area_225_2f_2": {"name": "Area 2", "capacity": 20},
-    "area_225_2f_3": {"name": "Area 3", "capacity": 20},
-    "area_225_2f_4": {"name": "Area 4", "capacity": 20},
+    "area_225_2f_1": {"name": "Upper Corridor Study Area", "capacity": 20},
+    "area_225_2f_2": {"name": "Northeast Open Area",       "capacity": 20},
+    "area_225_2f_3": {"name": "222 Collaboration",         "capacity": 20},
+    "area_225_2f_4": {"name": "202 Broadcast Room",        "capacity": 20},
 }
 
 
 def init_db():
+    """Create the occupancy_history table and index if they don't exist yet."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    # One row per area per minute: stores how many people were detected at that time
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS occupancy_history (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,7 +36,7 @@ def init_db():
         )
     """)
 
-    # Index for fast queries by area + time range
+    # Index speeds up queries like "give me all records for area X in the last 24 hours"
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_area_recorded
         ON occupancy_history (area_id, recorded_at)
@@ -41,6 +47,7 @@ def init_db():
 
 
 def insert_record(area_id: str, count: int, recorded_at: int):
+    """Save one occupancy snapshot to SQLite (called once per minute per area)."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -52,7 +59,7 @@ def insert_record(area_id: str, count: int, recorded_at: int):
 
 
 def query_history(area_id: str, since: int) -> list[dict]:
-    """Return records for area_id where recorded_at >= since."""
+    """Return all records for area_id where recorded_at >= since (Unix timestamp)."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(
