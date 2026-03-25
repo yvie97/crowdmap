@@ -1,0 +1,4 @@
+venv/                                                                                                                                                               
+  occupancy.db                                                                                                                                                              
+  __pycache__/                                                                                                                                                              
+  *.pyc
