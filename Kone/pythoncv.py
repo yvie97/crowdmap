@@ -22,6 +22,9 @@ model = YOLO("yolov8n.pt")
 # 全局变量：用于在视频流和 API 之间共享最新的人数
 current_people_count = 0
 
+# NEW：声明这个摄像头对应的区域 ID（必须和 db.py 里的 AREA_IDS 一致）
+AREA_ID = "area_225_2f_1"
+
 def generate_frames():
     global current_people_count
     
@@ -82,11 +85,12 @@ def generate_frames():
 def video_feed():
     return StreamingResponse(generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame")
 
-# 接口二：前端 JavaScript 用 fetch 来获取最新人数
+# NEW：返回格式从 {"count": n} 改为 list，匹配 ingest.py 期望的结构
+# ingest.py 第 20 行：areas = response.json()  # expects list of {area_id, count}
 @app.get("/api/current_count")
 def get_current_count():
-    return {"count": current_people_count}
+    return [{"area_id": AREA_ID, "count": current_people_count}]  # ✨ NEW
 
 if __name__ == "__main__":
     # 启动服务器，运行在本地的 8000 端口
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
