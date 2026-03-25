@@ -6,7 +6,7 @@ import httpx
 from cache import set_current
 from db import insert_record
 
-CV_SERVER_URL = "http://localhost:8000/api/current_count"
+CV_SERVER_URL = "http://localhost:8001/api/current_count"
 
 # How often (in seconds) to poll Kone's CV server
 POLL_INTERVAL = 1
