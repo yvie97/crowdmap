@@ -12,6 +12,11 @@ from ingest import poll_and_store
 
 
 def get_level(count: int, capacity: int) -> str:
+    """Convert a raw count into a crowd level label.
+    low:    0-33% of capacity
+    medium: 34-66% of capacity
+    high:   67%+ of capacity
+    """
     ratio = count / capacity
     if ratio <= 0.33:
         return "low"
@@ -21,6 +26,9 @@ def get_level(count: int, capacity: int) -> str:
 
 
 class ConnectionManager:
+    """Keeps track of all currently connected WebSocket clients.
+    When new occupancy data arrives, broadcast it to all of them at once.
+    """
     def __init__(self):
         self.active: list[WebSocket] = []
 
@@ -44,7 +52,9 @@ manager = ConnectionManager()
 
 
 async def on_cv_update(areas: list[dict]):
-    """Called by ingest.py after each successful poll. Broadcasts to all WebSocket clients."""
+    """Called by ingest.py after each successful poll from Kone's CV server.
+    Packages the data into the agreed WebSocket format and broadcasts to all clients.
+    """
     now = int(time.time())
     payload = {
         "areas": [
@@ -63,15 +73,17 @@ async def on_cv_update(areas: list[dict]):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    """Runs once when the server starts up."""
+    init_db()          # Create SQLite tables if they don't exist
     print("Database ready.")
-    asyncio.create_task(poll_and_store(on_update=on_cv_update))
+    asyncio.create_task(poll_and_store(on_update=on_cv_update))  # Start CV polling
     print("CV polling started.")
     yield
 
 
 app = FastAPI(title="Campus Occupancy API", lifespan=lifespan)
 
+# Allow the React frontend (any origin during development) to call this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -82,11 +94,15 @@ app.add_middleware(
 
 @app.get("/health")
 def health():
+    """Simple health check - returns ok if the server is running."""
     return {"status": "ok"}
 
 
 @app.get("/api/areas")
 def get_areas():
+    """Returns current occupancy data for all 4 areas.
+    Reads from Redis (fast, in-memory). If no data yet, count defaults to 0.
+    """
     results = []
     for area_id in AREA_IDS:
         meta = AREA_META[area_id]
@@ -106,6 +122,9 @@ def get_areas():
 
 @app.get("/api/areas/{area_id}/history")
 def get_history(area_id: str, hours: int = 24):
+    """Returns historical occupancy records for one area (one snapshot per minute).
+    Default: past 24 hours. Use ?hours=N to change the range.
+    """
     if area_id not in AREA_IDS:
         raise HTTPException(status_code=404, detail="Area not found")
     since = int(time.time()) - hours * 3600
@@ -114,6 +133,9 @@ def get_history(area_id: str, hours: int = 24):
 
 @app.get("/api/recommend")
 def recommend():
+    """Returns all areas sorted by current count (least crowded first).
+    Frontend uses this to power the 'Find me a seat' feature.
+    """
     results = []
     for area_id in AREA_IDS:
         meta = AREA_META[area_id]
@@ -131,9 +153,12 @@ def recommend():
 
 @app.websocket("/ws/density")
 async def websocket_density(ws: WebSocket):
+    """WebSocket endpoint for real-time occupancy updates.
+    Frontend connects here once; backend pushes new data every second automatically.
+    """
     await manager.connect(ws)
     try:
         while True:
-            await ws.receive_text()  # keep connection alive
+            await ws.receive_text()  # Keep connection alive
     except WebSocketDisconnect:
         manager.disconnect(ws)
