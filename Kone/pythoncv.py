@@ -24,13 +24,25 @@ current_people_count = 0
 
 def generate_frames():
     global current_people_count
-    cap = cv2.VideoCapture(0)
-    ROI = (200, 150, 500, 400)
+    
+    # 🔴 修改点 1：把这里的 0 换成你的视频文件名（必须带后缀名，比如 .mp4 或 .avi）
+    # 确保这个视频文件和你的 pythoncv.py 放在同一个文件夹 Kone 里
+    video_path = "demo_video01.MOV" 
+    cap = cv2.VideoCapture(video_path)
+    
+    # ⚠️ 注意：如果你的视频分辨率很大（比如 1920x1080），这个 ROI 框可能会显得很小或者位置不对
+    # 你可以根据实际情况调大这些数字：(左上角x, 左上角y, 右下角x, 右下角y)
+    ROI = (0, 0, 3000, 3000)
 
     while True:
         ret, frame = cap.read()
+        
+        # 🔴 修改点 2：视频循环播放逻辑
         if not ret:
-            break
+            # 如果 ret 为 False，说明视频播放到最后一帧了。
+            # 这里我们将视频的帧指针重新设置回第 0 帧，实现无限循环播放
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            continue
 
         results = model(frame)
         people_count = 0
@@ -55,17 +67,16 @@ def generate_frames():
         cv2.rectangle(frame, (ROI[0], ROI[1]), (ROI[2], ROI[3]), (255, 0, 0), 2)
         cv2.putText(frame, f"People in ROI: {people_count}", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-        # 3. 更新全局变量，把最新的人数存起来
+        # 更新全局变量
         current_people_count = people_count
 
-        # 4. 把 OpenCV 的图像转换为网络传输支持的 JPEG 格式
+        # 图像转换为网络流格式
         ret, buffer = cv2.imencode('.jpg', frame)
         frame_bytes = buffer.tobytes()
 
-        # 5. 按照 MJPEG 流的格式不断生成数据
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-
+        
 # 接口一：前端用 <img src="..."> 来接这个视频流
 @app.get("/video_feed")
 def video_feed():

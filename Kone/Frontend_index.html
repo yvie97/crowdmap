@@ -46,15 +46,15 @@
         const historyChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: [], /* X轴：时间标签 */
+                labels: [], 
                 datasets: [{
                     label: '实时人数',
-                    data: [], /* Y轴：人数数据 */
+                    data: [], 
                     borderColor: '#3498db',
                     backgroundColor: 'rgba(52, 152, 219, 0.2)',
                     borderWidth: 2,
                     fill: true,
-                    tension: 0.4 /* 让线条平滑弯曲 */
+                    tension: 0.4 
                 }]
             },
             options: {
@@ -65,12 +65,12 @@
             }
         });
 
-        /* 2. 模拟数据引擎：每 2 秒钟自动执行一次 */
-       /* 2. 真实数据引擎：每 2 秒钟向后端拉取一次数据 */
+        /* 2. 真实数据引擎：每 2 秒钟向后端拉取一次数据 */
         setInterval(async () => {
             try {
-                // 向 FastAPI 接口发送请求
-                const response = await fetch('http://localhost:8000/api/current_count');
+                // 🔴 关键修复：加入了 ?t=时间戳，防止浏览器偷懒读取缓存
+                const timestamp = new Date().getTime();
+                const response = await fetch(`http://localhost:8000/api/current_count?t=${timestamp}`);
                 const data = await response.json();
                 
                 // 拿到真实的 ROI 人数
@@ -95,9 +95,11 @@
                 historyChart.update();
 
             } catch (error) {
-                // 如果请求失败（比如后端没开），显示报错状态
                 console.error("无法连接到后端服务器", error);
                 document.getElementById('system-status').innerText = '🔴 离线 (后端未启动或连接断开)';
                 document.getElementById('system-status').style.color = '#e74c3c';
             }
         }, 2000);
+    </script>
+</body>
+</html>
