@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapContainer, ImageOverlay, Polygon, Popup, useMap } from 'react-leaflet';
+import { MapContainer, ImageOverlay, Polygon, Popup, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './App.css';
+
+// Remove default marker icon to prevent ghost icons on divIcon markers
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({ iconUrl: '', shadowUrl: '', iconRetinaUrl: '' });
 
 const MAP_WIDTH = 1520;
 const MAP_HEIGHT = 1442;
 const MAP_BOUNDS = [[0, 0], [MAP_HEIGHT, MAP_WIDTH]];
 const MAP_MAX_BOUNDS = [[-300, -200], [MAP_HEIGHT + 1200, MAP_WIDTH + 200]];
-const MAP_BG = 'rgb(208, 213, 219)';
+const MAP_BG = 'rgb(247, 244, 240)';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
 const WS_BASE  = process.env.REACT_APP_WS_BASE  || 'ws://localhost:8000';
@@ -21,21 +25,38 @@ const MOCK_DATA = {
 };
 
 const AREAS = [
-  { id: 'area_225_2f_1', name: 'North Corridor',      shortName: 'ZONE A', polygon: [[1045, 545],[1045, 1000],[1107, 1000],[1107, 545]] },
-  { id: 'area_225_2f_2', name: 'Northeast Open Area', shortName: 'ZONE B', polygon: [[1130,980],[1435,980],[1435,1190],[1130,1317]] },
-  { id: 'area_225_2f_3', name: 'Northwest Open Area', shortName: 'ZONE C', polygon: [[1180,157],[1180,563],[1435,563],[1435,157]] },
-  { id: 'area_225_2f_4', name: 'East Corridor',       shortName: 'ZONE D', polygon: [[480,1075],[480,1133],[825,1133],[825,1075]] },
+  { id: 'area_225_2f_1', name: 'North Corridor',      shortName: 'ZONE A', polygon: [[1045, 535],[1045, 1007],[1107, 1007],[1107, 535]] },
+  { id: 'area_225_2f_2', name: 'Northeast Open Area', shortName: 'ZONE B', polygon: [[1130,985],[1435,985],[1435,1212],[1130,1345]] },
+  { id: 'area_225_2f_3', name: 'Northwest Open Area', shortName: 'ZONE C', polygon: [[1177,131],[1177,557],[1435,557],[1435,131]] },
+  { id: 'area_225_2f_4', name: 'East Corridor',       shortName: 'ZONE D', polygon: [[480,1095],[480,1150],[825,1150],[825,1095]] },
 ];
 
-const HISTORY_LEN = 14;
+const HISTORY_LEN = 60;
+const CHART_COLOR = '#7a5e3e';
+const LINE_STYLES = [
+  { dasharray: 'none',      label: '——' },
+  { dasharray: '6,3',       label: '- -' },
+  { dasharray: '2,3',       label: '···' },
+  { dasharray: '10,3,2,3',  label: '—·—' },
+];
 
 function getColorFromLevel(level) {
   switch (level) {
-    case 'low':    return '#22c55e';
-    case 'medium': return '#f59e0b';
-    case 'high':   return '#ef4444';
-    default:       return '#64748b';
+    case 'low':    return 'rgb(120,168,135)';
+    case 'medium': return 'rgb(215,196,145)';
+    case 'high':   return 'rgb(205,140,118)';
+    default:       return 'rgb(203,192,176)';
   }
+}
+
+function colorAlpha(rgbStr, opacity) {
+  return rgbStr.replace('rgb(', 'rgba(').replace(')', `,${opacity})`);
+}
+
+function polygonCentroid(pts) {
+  const lat = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+  const lng = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+  return [lat, lng];
 }
 
 /** Shoelace formula — polygon points are [lat, lng] */
@@ -101,7 +122,7 @@ function FitBounds() {
 }
 
 /* ── Occupancy history sparkline chart ───────── */
-function OccupancyChart({ historyData, areaData }) {
+function OccupancyChart({ historyData }) {
   const W = 260, H = 90;
   const pL = 26, pR = 8, pT = 8, pB = 14;
   const cW = W - pL - pR, cH = H - pT - pB;
@@ -124,29 +145,29 @@ function OccupancyChart({ historyData, areaData }) {
       {/* Grid lines */}
       {gridYs.map((g, i) => (
         <g key={i}>
-          <line x1={pL} y1={g.y} x2={pL + cW} y2={g.y} stroke="#e2e8f0" strokeWidth="1" />
-          <text x={pL - 3} y={g.y + 3.5} fontSize="8" fill="#94a3b8" textAnchor="end">{g.label}</text>
+          <line x1={pL} y1={g.y} x2={pL + cW} y2={g.y} stroke="#ddd5c0" strokeWidth="1" />
+          <text x={pL - 3} y={g.y + 3.5} fontSize="8" fill="#7a5e3e" textAnchor="end">{g.label}</text>
         </g>
       ))}
       {/* Zone lines */}
-      {AREAS.map(area => {
+      {AREAS.map((area, idx) => {
         const data = historyData[area.id];
         if (!data || data.length < 2) return null;
-        const info = areaData[area.id] || {};
-        const color = getColorFromLevel(info.level || 'low');
+        const style = LINE_STYLES[idx % LINE_STYLES.length];
         const pts = toPolyline(data);
         const last = pts.split(' ').pop().split(',');
         return (
           <g key={area.id}>
-            <polyline points={pts} fill="none" stroke={color} strokeWidth="1.8"
+            <polyline points={pts} fill="none" stroke={CHART_COLOR} strokeWidth="1.1"
+              strokeDasharray={style.dasharray === 'none' ? undefined : style.dasharray}
               strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx={parseFloat(last[0])} cy={parseFloat(last[1])} r="3" fill={color} />
+            <circle cx={parseFloat(last[0])} cy={parseFloat(last[1])} r="3" fill={CHART_COLOR} />
           </g>
         );
       })}
       {/* X axis labels */}
-      <text x={pL}      y={H - 4} fontSize="8" fill="#94a3b8">−1h</text>
-      <text x={pL + cW} y={H - 4} fontSize="8" fill="#94a3b8" textAnchor="end">Now</text>
+      <text x={pL}      y={H - 4} fontSize="8" fill="#7a5e3e">−1h</text>
+      <text x={pL + cW} y={H - 4} fontSize="8" fill="#7a5e3e" textAnchor="end">Now</text>
     </svg>
   );
 }
@@ -192,7 +213,7 @@ function LeftPanel({ areaData }) {
             <div key={area.id} className="zone-card">
               <div className="zone-card-top">
                 <span className="zone-short-name">{area.shortName}</span>
-                <span className="zone-level-tag" style={{ color, borderColor: color + '50', background: color + '18' }}>
+                <span className="zone-level-tag" style={{ color: '#4a3a28', borderColor: colorAlpha(color, 0.6), background: colorAlpha(color, 0.7) }}>
                   {capitalizeLevel(level)}
                 </span>
               </div>
@@ -211,9 +232,9 @@ function LeftPanel({ areaData }) {
       <div className="panel-card">
         <div className="panel-title">OCCUPANCY LEVEL</div>
         {[
-          { label: 'LOW',    sub: '< 33% occupied',  grad: 'linear-gradient(90deg,#22c55e,#86efac)' },
-          { label: 'MEDIUM', sub: '33–66% occupied',  grad: 'linear-gradient(90deg,#f59e0b,#fcd34d)' },
-          { label: 'HIGH',   sub: '> 66% occupied',   grad: 'linear-gradient(90deg,#ef4444,#fca5a5)' },
+          { label: 'LOW',    sub: '< 33% occupied',  grad: 'linear-gradient(90deg,rgb(120,168,135),rgb(155,198,168))' },
+          { label: 'MEDIUM', sub: '33–66% occupied',  grad: 'linear-gradient(90deg,rgb(215,196,145),rgb(232,215,170))' },
+          { label: 'HIGH',   sub: '> 66% occupied',   grad: 'linear-gradient(90deg,rgb(205,140,118),rgb(225,168,150))' },
         ].map(e => (
           <div key={e.label} className="legend-entry">
             <div className="legend-bar" style={{ background: e.grad }} />
@@ -253,11 +274,16 @@ function RightPanel({ areaData, connected, historyData }) {
         <div className="panel-title">OCCUPANCY HISTORY</div>
         <OccupancyChart historyData={historyData} areaData={areaData} />
         <div className="chart-legend-row">
-          {AREAS.map(area => {
-            const color = getColorFromLevel((areaData[area.id] || {}).level || 'low');
+          {AREAS.map((area, idx) => {
+            const style = LINE_STYLES[idx % LINE_STYLES.length];
             return (
               <span key={area.id} className="chart-legend-item">
-                <span className="chart-legend-dot" style={{ background: color }} />
+                <svg width="24" height="10" viewBox="0 0 24 10" style={{ flexShrink: 0 }}>
+                  <line x1="0" y1="5" x2="24" y2="5"
+                    stroke={CHART_COLOR} strokeWidth="2"
+                    strokeDasharray={style.dasharray === 'none' ? undefined : style.dasharray}
+                    strokeLinecap="round" />
+                </svg>
                 {area.shortName}
               </span>
             );
@@ -268,9 +294,17 @@ function RightPanel({ areaData, connected, historyData }) {
       <div className="panel-card">
         <div className="panel-title">SPACE DENSITY</div>
         <div className="density-subtitle">People per unit area · cross-zone comparison</div>
-        {AREAS.map(area => {
+        {(() => {
+          const densities = AREAS.map(area => {
+            const count = (areaData[area.id] || {}).count ?? 0;
+            const sq = AREA_SQUNITS[area.id] || 1;
+            return (count / sq) * 10000;
+          });
+          const maxD = Math.max(...densities, 0.01);
+          return AREAS.map((area, idx) => {
           const count = (areaData[area.id] || {}).count ?? 0;
-          const { pct, level } = getDensityInfo(count, area.id);
+          const { level } = getDensityInfo(count, area.id);
+          const pct = Math.min((densities[idx] / maxD) * 100, 100);
           const color = getColorFromLevel(level);
           const tag   = level === 'low' ? 'Low' : level === 'medium' ? 'Med' : 'High';
           return (
@@ -280,11 +314,12 @@ function RightPanel({ areaData, connected, historyData }) {
                 <div className="density-bar-fill" style={{ width: `${pct}%`, background: color }} />
               </div>
               <span className="density-tag" style={{
-                color, border: `1px solid ${color}55`, background: `${color}18`
+                color: '#4a3a28', border: `1px solid ${colorAlpha(color, 0.6)}`, background: colorAlpha(color, 0.7)
               }}>{tag}</span>
             </div>
           );
-        })}
+        });
+        })()}
       </div>
 
       <div className="panel-card">
@@ -433,9 +468,26 @@ function App() {
             <p className="subtitle">225 Second Floor · Real-time Occupancy</p>
           </div>
         </div>
-        <span className={`connection-badge ${connected ? 'connected' : 'disconnected'}`}>
-          {connected ? '((·)) LIVE' : '○ OFFLINE'}
-        </span>
+        <div className="header-right">
+          <span className={`connection-badge ${connected ? 'connected' : 'disconnected'}`}>
+            {connected ? '((·)) LIVE' : '○ OFFLINE'}
+          </span>
+          <div className="header-avatars">
+            <div className="avatar avatar-primary" title="User">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+              </svg>
+            </div>
+            <div className="avatar avatar-secondary" title="Settings">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17">
+                <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a6.97 6.97 0 0 0-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54a6.95 6.95 0 0 0-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.36 1.04.67 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54a6.95 6.95 0 0 0 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/>
+              </svg>
+            </div>
+            <div className="header-menu-btn" title="Menu">
+              <span/><span/><span/>
+            </div>
+          </div>
+        </div>
       </header>
 
       <div className="content-wrapper">
@@ -446,11 +498,19 @@ function App() {
 
           <div className="map-wrapper">
             <div className="map-label">
-              <span className="map-label-title">Floor Plan — Level 2</span>
+              <span className="map-label-title">CrowdMap · Floor Plan — Level 2</span>
               <span className="map-label-hint">Click a highlighted zone for details</span>
             </div>
             {/* map-canvas uses aspect-ratio to constrain width to map image */}
             <div className="map-canvas">
+              <div className="compass">
+                <svg viewBox="0 0 40 40" width="40" height="40">
+                  <polygon points="20,4 24,20 20,17 16,20" fill="#a03020" />
+                  <polygon points="20,36 24,20 20,23 16,20" fill="#c8b89a" />
+                  <circle cx="20" cy="20" r="3" fill="#3a2810" />
+                </svg>
+                <div className="compass-n">N</div>
+              </div>
               <MapContainer
                 crs={L.CRS.Simple}
                 bounds={MAP_BOUNDS}
@@ -465,6 +525,18 @@ function App() {
                 <FitBounds />
                 <ImageOverlay url="/assets/floor_map.png" bounds={MAP_BOUNDS} />
                 {AREAS.map(area => {
+                  const centroid = polygonCentroid(area.polygon);
+                  const labelIcon = L.divIcon({
+                    className: 'zone-map-label-wrapper',
+                    html: `<span class="zone-map-label">${area.name}</span>`,
+                    iconSize: [220, 30],
+                    iconAnchor: [110, 15],
+                  });
+                  return (
+                    <Marker key={`label-${area.id}`} position={centroid} icon={labelIcon} interactive={false} zIndexOffset={1000} />
+                  );
+                })}
+                {AREAS.map(area => {
                   const info  = areaData[area.id] || {};
                   const count = info.count ?? 0;
                   const level = info.level || 'low';
@@ -473,13 +545,16 @@ function App() {
                     <Polygon
                       key={area.id}
                       positions={area.polygon}
-                      pathOptions={{ color, fillColor: color, fillOpacity: 0.28, weight: 2 }}
+                      pathOptions={{ color, fillColor: color, fillOpacity: 0.55, weight: 2 }}
                       eventHandlers={{
-                        mouseover: e => e.target.setStyle({ fillOpacity: 0.5 }),
-                        mouseout:  e => e.target.setStyle({ fillOpacity: 0.28 }),
+                        mouseover: e => e.target.setStyle({ fillOpacity: 0.72 }),
+                        mouseout:  e => e.target.setStyle({ fillOpacity: 0.55 }),
                       }}
                     >
-                      <Popup autoPanPaddingTopLeft={[10, 120]} autoPanPaddingBottomRight={[10, 20]}>
+                      <Popup autoPan={false}
+                        offset={['area_225_2f_2','area_225_2f_3'].includes(area.id) ? [0, 220] : [0, 0]}
+                        className={['area_225_2f_2','area_225_2f_3'].includes(area.id) ? 'popup-below' : ''}
+                      >
                         <div className="popup-content">
                           <div className="popup-short">{area.shortName}</div>
                           <h3>{area.name}</h3>
