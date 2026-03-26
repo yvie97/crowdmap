@@ -61,7 +61,7 @@ body {
 /* ── 3-column layout ─────────────────────────── */
 .dashboard-layout {
   display: grid;
-  grid-template-columns: 360px 1fr 380px;
+  grid-template-columns: 450px 1fr 450px;
   gap: 12px;
   align-items: stretch;
   /* Lock entire layout to viewport height so map never overflows */
@@ -72,8 +72,8 @@ body {
 /* ── Side panels ─────────────────────────────── */
 .side-panel {
   display: flex; flex-direction: column; gap: 10px;
+  height: 100%;
   overflow-y: auto;
-  /* custom scrollbar */
   scrollbar-width: thin;
   scrollbar-color: #e2e8f0 transparent;
 }
@@ -127,11 +127,23 @@ body {
 
 /* ── History chart ───────────────────────────── */
 .chart-legend-row {
-  display: flex; gap: 10px; flex-wrap: wrap;
+  display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
   margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f5f9;
 }
 .chart-legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; color: #64748b; }
 .chart-legend-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Space Density card ───────────────────────── */
+.density-subtitle { font-size: 0.72rem; color: #94a3b8; margin-bottom: 10px; }
+.density-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid #f8fafc;
+}
+.density-row:last-child { border-bottom: none; }
+.density-zone { font-size: 0.72rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px; width: 58px; flex-shrink: 0; white-space: nowrap; }
+.density-bar-track { flex: 1; height: 5px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
+.density-bar-fill  { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.density-tag { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; flex-shrink: 0; }
 
 /* ── System status ───────────────────────────── */
 .status-item  { display: flex; align-items: center; gap: 8px; padding: 4px 0; }

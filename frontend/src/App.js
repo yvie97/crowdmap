@@ -7,23 +7,24 @@ import './App.css';
 const MAP_WIDTH = 1520;
 const MAP_HEIGHT = 1442;
 const MAP_BOUNDS = [[0, 0], [MAP_HEIGHT, MAP_WIDTH]];
+const MAP_MAX_BOUNDS = [[-300, -200], [MAP_HEIGHT + 1200, MAP_WIDTH + 200]];
 const MAP_BG = 'rgb(208, 213, 219)';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
 const WS_BASE  = process.env.REACT_APP_WS_BASE  || 'ws://localhost:8000';
 
 const MOCK_DATA = {
-  area_225_2f_1: { count: 12, capacity: 20, level: 'high',   timestamp: Date.now() / 1000 },
+  area_225_2f_1: { count: 8,  capacity: 10, level: 'high',   timestamp: Date.now() / 1000 },
   area_225_2f_2: { count: 3,  capacity: 20, level: 'low',    timestamp: Date.now() / 1000 },
   area_225_2f_3: { count: 7,  capacity: 20, level: 'medium', timestamp: Date.now() / 1000 },
-  area_225_2f_4: { count: 1,  capacity: 20, level: 'low',    timestamp: Date.now() / 1000 },
+  area_225_2f_4: { count: 3,  capacity: 10, level: 'medium', timestamp: Date.now() / 1000 },
 };
 
 const AREAS = [
-  { id: 'area_225_2f_1', name: 'Upper Corridor',      shortName: 'ZONE A', polygon: [[1045, 545],[1045, 1000],[1107, 1000],[1107, 545]] },
+  { id: 'area_225_2f_1', name: 'North Corridor',      shortName: 'ZONE A', polygon: [[1045, 545],[1045, 1000],[1107, 1000],[1107, 545]] },
   { id: 'area_225_2f_2', name: 'Northeast Open Area', shortName: 'ZONE B', polygon: [[1130,980],[1435,980],[1435,1190],[1130,1317]] },
-  { id: 'area_225_2f_3', name: '222 Collaboration',   shortName: 'ZONE C', polygon: [[1180,157],[1180,563],[1435,563],[1435,157]] },
-  { id: 'area_225_2f_4', name: '202 Broadcast Room',  shortName: 'ZONE D', polygon: [[480,1070],[480,1133],[575,1133],[575,1070]] },
+  { id: 'area_225_2f_3', name: 'Northwest Open Area', shortName: 'ZONE C', polygon: [[1180,157],[1180,563],[1435,563],[1435,157]] },
+  { id: 'area_225_2f_4', name: 'East Corridor',       shortName: 'ZONE D', polygon: [[480,1075],[480,1133],[825,1133],[825,1075]] },
 ];
 
 const HISTORY_LEN = 14;
@@ -35,6 +36,36 @@ function getColorFromLevel(level) {
     case 'high':   return '#ef4444';
     default:       return '#64748b';
   }
+}
+
+/** Shoelace formula — polygon points are [lat, lng] */
+function polygonArea(pts) {
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [y1, x1] = pts[i];
+    const [y2, x2] = pts[(i + 1) % pts.length];
+    area += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(area) / 2;
+}
+
+// Pre-compute each zone's area in map units²
+const AREA_SQUNITS = Object.fromEntries(
+  AREAS.map(a => [a.id, polygonArea(a.polygon)])
+);
+
+// Thresholds in people per 10 000 map-unit²
+// Max full-capacity density across zones ≈ 5.0 (East Corridor 10p / ~20k u²)
+const D_LOW = 1.65;   // < 33 % of max
+const D_HIGH = 3.3;   // > 66 % of max
+const D_MAX  = 5.0;
+
+function getDensityInfo(count, areaId) {
+  const sq  = AREA_SQUNITS[areaId] || 1;
+  const d   = (count / sq) * 10000;               // people per 10k u²
+  const pct = Math.min((d / D_MAX) * 100, 100);
+  const level = d < D_LOW ? 'low' : d < D_HIGH ? 'medium' : 'high';
+  return { pct, level };
 }
 
 function capitalizeLevel(level) {
@@ -71,8 +102,8 @@ function FitBounds() {
 
 /* ── Occupancy history sparkline chart ───────── */
 function OccupancyChart({ historyData, areaData }) {
-  const W = 260, H = 100;
-  const pL = 26, pR = 8, pT = 8, pB = 22;
+  const W = 260, H = 90;
+  const pL = 26, pR = 8, pT = 8, pB = 14;
   const cW = W - pL - pR, cH = H - pT - pB;
 
   const allVals = Object.values(historyData).flat();
@@ -116,18 +147,6 @@ function OccupancyChart({ historyData, areaData }) {
       {/* X axis labels */}
       <text x={pL}      y={H - 4} fontSize="8" fill="#94a3b8">−1h</text>
       <text x={pL + cW} y={H - 4} fontSize="8" fill="#94a3b8" textAnchor="end">Now</text>
-      {/* Zone color legend */}
-      {AREAS.map((area, i) => {
-        const info = areaData[area.id] || {};
-        const color = getColorFromLevel(info.level || 'low');
-        const x = pL + i * (cW / (AREAS.length - 1));
-        return (
-          <g key={area.id}>
-            <rect x={x - 12} y={H - 14} width="8" height="3" rx="1.5" fill={color} />
-            <text x={x - 3} y={H - 10} fontSize="7" fill="#64748b">{area.shortName.replace('ZONE ', '')}</text>
-          </g>
-        );
-      })}
     </svg>
   );
 }
@@ -189,19 +208,8 @@ function LeftPanel({ areaData }) {
           );
         })}
       </div>
-    </div>
-  );
-}
-
-/* ── Right panel ─────────────────────────────── */
-function RightPanel({ areaData, connected, historyData }) {
-  const lastUpdated = Math.max(...Object.values(areaData).map(d => d.timestamp ?? 0));
-  const lowAreas  = Object.values(areaData).filter(d => d.level === 'low').length;
-  const highAreas = Object.values(areaData).filter(d => d.level === 'high').length;
-  return (
-    <div className="side-panel right-panel">
       <div className="panel-card">
-        <div className="panel-title">OCCUPANCY LEGEND</div>
+        <div className="panel-title">OCCUPANCY LEVEL</div>
         {[
           { label: 'LOW',    sub: '< 33% occupied',  grad: 'linear-gradient(90deg,#22c55e,#86efac)' },
           { label: 'MEDIUM', sub: '33–66% occupied',  grad: 'linear-gradient(90deg,#f59e0b,#fcd34d)' },
@@ -216,7 +224,17 @@ function RightPanel({ areaData, connected, historyData }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
 
+/* ── Right panel ─────────────────────────────── */
+function RightPanel({ areaData, connected, historyData }) {
+  const lastUpdated = Math.max(...Object.values(areaData).map(d => d.timestamp ?? 0));
+  const lowAreas  = Object.values(areaData).filter(d => d.level === 'low').length;
+  const highAreas = Object.values(areaData).filter(d => d.level === 'high').length;
+  return (
+    <div className="side-panel right-panel">
       <div className="panel-card">
         <div className="panel-title">QUICK STATS</div>
         {[
@@ -245,6 +263,28 @@ function RightPanel({ areaData, connected, historyData }) {
             );
           })}
         </div>
+      </div>
+
+      <div className="panel-card">
+        <div className="panel-title">SPACE DENSITY</div>
+        <div className="density-subtitle">People per unit area · cross-zone comparison</div>
+        {AREAS.map(area => {
+          const count = (areaData[area.id] || {}).count ?? 0;
+          const { pct, level } = getDensityInfo(count, area.id);
+          const color = getColorFromLevel(level);
+          const tag   = level === 'low' ? 'Low' : level === 'medium' ? 'Med' : 'High';
+          return (
+            <div key={area.id} className="density-row">
+              <span className="density-zone">{area.shortName}</span>
+              <div className="density-bar-track">
+                <div className="density-bar-fill" style={{ width: `${pct}%`, background: color }} />
+              </div>
+              <span className="density-tag" style={{
+                color, border: `1px solid ${color}55`, background: `${color}18`
+              }}>{tag}</span>
+            </div>
+          );
+        })}
       </div>
 
       <div className="panel-card">
@@ -331,7 +371,10 @@ function App() {
     try {
       const res = await fetch(`${API_BASE}/api/recommend`);
       if (!res.ok) throw new Error();
-      setRecommendations(await res.json());
+      const data = await res.json();
+      // Only use backend data if CV is running (at least one area has count > 0)
+      if (!data.length || !data.some(item => item.count > 0)) return;
+      setRecommendations(data);
     } catch {
       const fallback = Object.entries(areaData)
         .map(([id, d]) => ({ area_id: id, count: d.count, capacity: d.capacity, level: d.level }))
@@ -386,7 +429,7 @@ function App() {
         <div className="header-left">
           <div className="header-logo">N</div>
           <div className="header-text">
-            <h1>NEU Seattle</h1>
+            <h1>Northeastern University - Seattle</h1>
             <p className="subtitle">225 Second Floor · Real-time Occupancy</p>
           </div>
         </div>
@@ -411,8 +454,8 @@ function App() {
               <MapContainer
                 crs={L.CRS.Simple}
                 bounds={MAP_BOUNDS}
-                maxBounds={MAP_BOUNDS}
-                maxBoundsViscosity={1.0}
+                maxBounds={MAP_MAX_BOUNDS}
+                maxBoundsViscosity={0.85}
                 style={{ background: MAP_BG }}
                 zoomSnap={0.25}
                 minZoom={-1}
@@ -436,7 +479,7 @@ function App() {
                         mouseout:  e => e.target.setStyle({ fillOpacity: 0.28 }),
                       }}
                     >
-                      <Popup>
+                      <Popup autoPanPaddingTopLeft={[10, 120]} autoPanPaddingBottomRight={[10, 20]}>
                         <div className="popup-content">
                           <div className="popup-short">{area.shortName}</div>
                           <h3>{area.name}</h3>
