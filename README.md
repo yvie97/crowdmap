@@ -5,7 +5,9 @@
 pip install opencv-python ultralytics fastapi uvicorn redis httpx
 
 
-brew install redis // if needed
+brew install redis 
+npm install
+// if needed
 
 
 // if occupied: kill -9 $(lsof -ti :8001)
@@ -14,11 +16,14 @@ run the program:
 
 brew services start redis 
 
+ source venv/bin/activate
 python3 pythoncv.py 
 
+ source venv/bin/activate
 python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 
-npm install
+ source venv/bin/activate
+
 npm start
 
 
