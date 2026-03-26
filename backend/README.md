@@ -62,7 +62,7 @@ brew services start redis
 cd backend
 python3 -m venv venv
 source venv/bin/activate
-venv/bin/pip install fastapi redis uvicorn httpx
+pip install -r requirements.txt
 ```
 
 ---
@@ -95,7 +95,7 @@ Server starts at `http://localhost:8000`
 
 | ID | Name |
 |----|------|
-| `area_225_2f_1` | Upper Corridor Study Area |
+| `area_225_2f_1` | North Corridor |
 | `area_225_2f_2` | Northeast Open Area |
-| `area_225_2f_3` | 222 Collaboration |
-| `area_225_2f_4` | 202 Broadcast Room |
+| `area_225_2f_3` | Northwest Open Area |
+| `area_225_2f_4` | East Corridor |

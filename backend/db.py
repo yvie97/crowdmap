@@ -14,10 +14,10 @@ AREA_IDS = [
 # Display name and max capacity for each area
 # Update names here if the frontend changes them
 AREA_META = {
-    "area_225_2f_1": {"name": "Upper Corridor Study Area", "capacity": 20},
-    "area_225_2f_2": {"name": "Northeast Open Area",       "capacity": 20},
-    "area_225_2f_3": {"name": "222 Collaboration",         "capacity": 20},
-    "area_225_2f_4": {"name": "202 Broadcast Room",        "capacity": 20},
+    "area_225_2f_1": {"name": "North Corridor",      "capacity": 10},
+    "area_225_2f_2": {"name": "Northeast Open Area", "capacity": 20},
+    "area_225_2f_3": {"name": "Northwest Open Area", "capacity": 20},
+    "area_225_2f_4": {"name": "East Corridor",       "capacity": 10},
 }
 
 
