@@ -44,9 +44,15 @@ CV Server (port 8001)
 
 ## Prerequisites
 
-- Python 3.11+
-- Redis running locally (`brew services start redis`)
-- Kone's CV server running on port 8001
+**1. Install Redis (the database service) via Homebrew:**
+```bash
+brew install redis
+brew services start redis
+```
+
+**2. Python 3.11+**
+
+**3. Kone's CV server running on port 8001**
 
 ---
 
@@ -56,7 +62,7 @@ CV Server (port 8001)
 cd backend
 python3 -m venv venv
 source venv/bin/activate
-pip install fastapi redis uvicorn httpx
+venv/bin/pip install fastapi redis uvicorn httpx
 ```
 
 ---
@@ -64,6 +70,7 @@ pip install fastapi redis uvicorn httpx
 ## Run
 
 ```bash
+cd backend
 source venv/bin/activate
 uvicorn main:app --reload
 ```
