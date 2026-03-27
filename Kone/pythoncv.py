@@ -25,18 +25,22 @@ SOURCES = [
         "video":   "demo_video01.MOV",
         "roi":     (0, 0, 6000, 6000),
     },
-    # 加第二路摄像头：取消下面的注释，改成你的文件名即可
-     {
+        {
         "area_id": "area_225_2f_2",
         "video":   "demo_video02.MOV",
         "roi":     (0, 0, 6000, 6000),
-     }
-    # {
-    #     "area_id": "area_225_2f_3",
-    #     "video":   "demo_video03.MOV",
-    #     "roi":     (0, 0, 6000, 6000),
-    # },
-    # {
+     },
+        {
+        "area_id": "area_225_2f_3",
+        "video":   "demo_video03.MOV",
+        "roi":     (0, 0, 6000, 6000),
+     },
+        {
+        "area_id": "area_225_2f_4",
+        "video":   "demo_video04.MOV",
+        "roi":     (0, 000, 6000, 6000),
+    }
+        # {
     #     "area_id": "area_225_2f_4",
     #     "video":   0,           # 直接接实体摄像头用索引
     #     "roi":     (100, 100, 1820, 980),
