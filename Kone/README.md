@@ -61,3 +61,11 @@ pip install opencv-python ultralytics fastapi uvicorn
 
 ***
 
+
+To check the demo_video or camera:
+
+http://localhost:8001/video_feed/area_225_2f_1
+http://localhost:8001/video_feed/area_225_2f_2
+http://localhost:8001/video_feed/area_225_2f_3
+http://localhost:8001/video_feed/area_225_2f_4
+
