@@ -32,15 +32,16 @@ SOURCES = [
      },
         {
         "area_id": "area_225_2f_3",
-        "video":   "demo_video03.MOV",
+        "video":   "demo_video02.MOV",
         "roi":     (0, 0, 6000, 6000),
      },
         {
         "area_id": "area_225_2f_4",
-        "video":   "demo_video04.MOV",
+        # "video":   "demo_video04.MOV",
+        "video":   0,           # 直接接实体摄像头用索引
         "roi":     (0, 000, 6000, 6000),
     }
-        # {
+    # {
     #     "area_id": "area_225_2f_4",
     #     "video":   0,           # 直接接实体摄像头用索引
     #     "roi":     (100, 100, 1820, 980),
@@ -69,8 +70,15 @@ def _run_source(src: dict):
     while True:
         ret, frame = cap.read()
         if not ret:                        # 视频播完 → 循环
-            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-            continue
+            if isinstance(video, int):
+                print(f"[{area_id}] Camera read failed, retrying...")
+                cap.release()
+                cap = cv2.VideoCapture(video)
+                continue
+            else:
+                # 视频文件播完 → 循环
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                continue
 
         count, annotated = detect_people(frame, roi)
 

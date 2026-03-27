@@ -12,18 +12,22 @@ npm install
 
 // if occupied: kill -9 $(lsof -ti :8001)
 
+* in the first terminal:
 run the program:
-
 brew services start redis 
 
- source venv/bin/activate
+* in kone file:
+source venv/bin/activate
 python3 pythoncv.py 
 
- source venv/bin/activate
+* in the second terminal:
+* in backend file:
+source venv/bin/activate
 python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 
- source venv/bin/activate
-
+* in the third termianl
+* in the frontedn file 
+source venv/bin/activate
 npm start
 
 
