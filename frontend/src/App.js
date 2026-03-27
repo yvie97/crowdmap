@@ -116,7 +116,7 @@ function initHistory() {
 function FitBounds() {
   const map = useMap();
   React.useEffect(() => {
-    map.fitBounds(MAP_BOUNDS, { padding: [0, 0] });
+    map.fitBounds(MAP_BOUNDS, { padding: [20, 20] });
   }, [map]);
   return null;
 }
@@ -295,16 +295,9 @@ function RightPanel({ areaData, connected, historyData }) {
         <div className="panel-title">SPACE DENSITY</div>
         <div className="density-subtitle">People per unit area · cross-zone comparison</div>
         {(() => {
-          const densities = AREAS.map(area => {
-            const count = (areaData[area.id] || {}).count ?? 0;
-            const sq = AREA_SQUNITS[area.id] || 1;
-            return (count / sq) * 10000;
-          });
-          const maxD = Math.max(...densities, 0.01);
           return AREAS.map((area, idx) => {
           const count = (areaData[area.id] || {}).count ?? 0;
-          const { level } = getDensityInfo(count, area.id);
-          const pct = Math.min((densities[idx] / maxD) * 100, 100);
+          const { level, pct } = getDensityInfo(count, area.id);
           const color = getColorFromLevel(level);
           const tag   = level === 'low' ? 'Low' : level === 'medium' ? 'Med' : 'High';
           return (
@@ -518,7 +511,7 @@ function App() {
                 maxBoundsViscosity={0.85}
                 style={{ background: MAP_BG }}
                 zoomSnap={0.25}
-                minZoom={-1}
+                minZoom={-2}
                 maxZoom={2}
                 attributionControl={false}
               >
