@@ -1,60 +1,63 @@
-## 🛠️ 安装与运行指南 (Installation & Setup)
 
-为了确保每个人都能顺利运行本项目，避免不同电脑上的环境冲突，我们强烈建议使用 Python 的**虚拟环境**来配置项目。请按照以下详细步骤操作：
 
-### 第一步：创建并激活虚拟环境 (Virtual Environment)
+***
 
-1. **打开终端 (Terminal / Command Prompt):** 进入本项目的根目录（即 `pythoncv.py` 所在的文件夹）。
+## 🛠️ Installation & Setup Guide
 
-2. **创建虚拟环境:**
-   在终端中输入以下命令，这会在当前文件夹下生成一个名为 `venv` 的隔离环境：
-   * **Mac / Linux:** 
-     ```bash
+To ensure everyone can run this project smoothly and avoid environment conflicts across different computers, we highly recommend setting up the project using a Python **virtual environment**. Please follow these detailed steps:
+
+### Step 1: Create and Activate a Virtual Environment
+
+1. **Open Terminal / Command Prompt:** Navigate to the root directory of this project (the folder containing `pythoncv.py`).
+
+2. **Create the virtual environment:**
+   Enter the following command in your terminal. This will create an isolated environment named `venv` in your current folder:
+   * **Mac / Linux:** ```bash
      python3 -m venv venv
      ```
-   * **Windows:** 
-     ```bash
+   * **Windows:** ```bash
      python -m venv venv
      ```
 
-3. **激活虚拟环境 (非常重要❗️):**
-   只有激活后，你安装的库才会被放在这个隔离环境中。根据你的系统运行相应的命令：
-   * **Mac / Linux:** 
-     ```bash
+3. **Activate the virtual environment (CRITICAL❗️):**
+   The libraries you install will only be placed in this isolated environment *after* activation. Run the corresponding command for your operating system:
+   * **Mac / Linux:** ```bash
      source venv/bin/activate
      ```
-   * **Windows:** 
-     ```bash
+   * **Windows:** ```bash
      venv\Scripts\activate
      ```
-   > ✅ **成功标志：** 激活成功后，你的命令行提示符最前面会出现 `(venv)` 字样。
+   > ✅ **Success Indicator:** Once successfully activated, you will see `(venv)` at the very beginning of your command prompt.
 
-### 第二步：安装必备依赖库 (Install Dependencies)
+### Step 2: Install Required Dependencies
 
-在确保虚拟环境**已激活**（终端带有 `(venv)` 标志）的情况下，我们需要安装计算机视觉和后端服务器相关的库。
+While ensuring your virtual environment is **activated** (the terminal shows the `(venv)` prefix), we need to install the libraries related to computer vision and the backend server.
 
-在终端中复制并运行以下命令，一次性安装所有必备库：
+Copy and run the following command in your terminal to install all required libraries at once:
 ```bash
 pip install opencv-python ultralytics fastapi uvicorn
 ```
-*库说明：*
-* `opencv-python`: 用于读取视频帧和绘制画面。
-* `ultralytics`: YOLOv8 官方库，用于核心的人数目标检测。
-* `fastapi` & `uvicorn`: 用于搭建轻量级后端，将视频流和数据发送给前端。
+*Library breakdown:*
+* `opencv-python`: Used for reading video frames and drawing on images.
+* `ultralytics`: The official YOLOv8 library, used for the core people/object detection.
+* `fastapi` & `uvicorn`: Used to build a lightweight backend to stream video and send data to the frontend.
 
-### 第三步：运行后端与前端 (Run the Application)
+### Step 3: Run the Application (Backend & Frontend)
 
-1. **准备视频文件:**
-   请确保你的测试视频文件（例如代码中指定的 `demo_video01.MOV`）已经放在了与 `pythoncv.py` **同一个文件夹**内。
+1. **Prepare your video file:**
+   Please make sure your test video file (e.g., `demo_video01.MOV` as specified in the code) is placed in the **same folder** as `pythoncv.py`.
 
-2. **启动 Python 后端:**
-   在终端中（保持虚拟环境激活状态）运行以下命令：
+2. **Start the Python backend:**
+   Run the following command in your terminal (while keeping the virtual environment activated):
    ```bash
    python3 pythoncv.py
    ```
-   > ⏳ **注意：** 第一次运行此命令时，系统会自动下载 YOLOv8 的轻量级模型文件 (`yolov8n.pt`)，可能需要几秒到一分钟的时间，请耐心等待。当终端出现类似 `Uvicorn running on http://0.0.0.0:8000` 的提示时，说明后端已成功启动！
+   > ⏳ **Note:** The first time you run this command, the system will automatically download the lightweight YOLOv8 model file (`yolov8n.pt`). This might take anywhere from a few seconds to a minute, so please be patient. When you see a message like `Uvicorn running on http://0.0.0.0:8000` in the terminal, the backend has successfully started!
 
-3. **打开前端展示界面:**
-   后端保持运行不要关闭。打开你的文件管理器，找到项目文件夹中的 `Frontend_index.html` 文件，**直接双击**用浏览器打开。
+3. **Open the frontend interface:**
+   Keep the backend running (do not close the terminal). Open your file manager, locate the `Frontend_index.html` file in the project folder, and **double-click it** to open it directly in your web browser.
    
-   你现在应该能看到实时的监控画面、当前识别到的人数，以及随时间变化的历史人数趋势图了！🎉
+   You should now be able to see the real-time monitoring feed, the current number of detected people, and a historical trend chart showing how the headcount changes over time! 🎉
+
+***
+
