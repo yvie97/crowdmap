@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MapContainer, ImageOverlay, Polygon, Popup, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -15,14 +15,8 @@ const MAP_MAX_BOUNDS = [[-300, -200], [MAP_HEIGHT + 1200, MAP_WIDTH + 200]];
 const MAP_BG = 'rgb(247, 244, 240)';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
-const WS_BASE  = process.env.REACT_APP_WS_BASE  || 'ws://localhost:8000';
+const FETCH_HEADERS = { 'ngrok-skip-browser-warning': '1' };
 
-const MOCK_DATA = {
-  area_225_2f_1: { count: 8,  capacity: 10, level: 'high',   timestamp: Date.now() / 1000 },
-  area_225_2f_2: { count: 3,  capacity: 20, level: 'low',    timestamp: Date.now() / 1000 },
-  area_225_2f_3: { count: 7,  capacity: 20, level: 'medium', timestamp: Date.now() / 1000 },
-  area_225_2f_4: { count: 3,  capacity: 10, level: 'medium', timestamp: Date.now() / 1000 },
-};
 
 const AREAS = [
   { id: 'area_225_2f_1', name: 'North Corridor',      shortName: 'ZONE A', polygon: [[1045, 535],[1045, 1007],[1107, 1007],[1107, 535]] },
@@ -94,24 +88,7 @@ function capitalizeLevel(level) {
   return level.charAt(0).toUpperCase() + level.slice(1);
 }
 
-/** Seed realistic-looking history from a base count */
-function seedHistory(baseCount, capacity) {
-  const arr = [];
-  let cur = baseCount;
-  for (let i = 0; i < HISTORY_LEN; i++) {
-    cur = Math.max(0, Math.min(capacity, cur + Math.round((Math.random() - 0.45) * 3)));
-    arr.push(cur);
-  }
-  return arr;
-}
 
-function initHistory() {
-  const h = {};
-  AREAS.forEach(a => {
-    h[a.id] = seedHistory(MOCK_DATA[a.id]?.count ?? 0, MOCK_DATA[a.id]?.capacity ?? 20);
-  });
-  return h;
-}
 
 function FitBounds() {
   const map = useMap();
@@ -335,19 +312,14 @@ function RightPanel({ areaData, connected, historyData }) {
 
 /* ── App ─────────────────────────────────────── */
 function App() {
-  const [areaData,       setAreaData]       = useState(MOCK_DATA);
-  const [historyData,    setHistoryData]    = useState(initHistory);
-  const [recommendations,setRecommendations]= useState(() =>
-    Object.entries(MOCK_DATA)
-      .map(([id, d]) => ({ area_id: id, count: d.count, capacity: d.capacity, level: d.level }))
-      .sort((a, b) => a.count - b.count)
-  );
-  const [connected,      setConnected]      = useState(false);
-  const wsRef = useRef(null);
+  const [areaData,       setAreaData]       = useState({});
+  const [historyData,    setHistoryData]    = useState({});
+  const [recommendations,setRecommendations]= useState([]);
+  const [connected] = useState(false);
 
   const fetchAreas = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/areas`);
+      const res = await fetch(`${API_BASE}/api/areas`, { headers: FETCH_HEADERS });
       if (!res.ok) throw new Error();
       const data = await res.json();
       // Only apply real data if CV is actually running (at least one area has count > 0)
@@ -364,7 +336,7 @@ function App() {
     try {
       const results = await Promise.all(
         AREAS.map(area =>
-          fetch(`${API_BASE}/api/areas/${area.id}/history?hours=1`)
+          fetch(`${API_BASE}/api/areas/${area.id}/history?hours=1`, { headers: FETCH_HEADERS })
             .then(r => { if (!r.ok) throw new Error(); return r.json(); })
             .then(rows => ({ id: area.id, rows }))
         )
@@ -397,7 +369,7 @@ function App() {
 
   const fetchRecommendations = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/recommend`);
+      const res = await fetch(`${API_BASE}/api/recommend`, { headers: FETCH_HEADERS });
       if (!res.ok) throw new Error();
       const data = await res.json();
       // Only use backend data if CV is running (at least one area has count > 0)
@@ -412,43 +384,13 @@ function App() {
   }, [areaData]);
 
   useEffect(() => {
-    function connectWS() {
-      const ws = new WebSocket(`${WS_BASE}/ws/density`);
-      ws.onopen  = () => setConnected(true);
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          const hasRealData = msg.areas.some(item => item.count > 0);
-          if (!hasRealData) return;
-          setAreaData(prev => {
-            const updated = { ...prev };
-            msg.areas.forEach(item => {
-              updated[item.area_id] = { ...updated[item.area_id], count: item.count, level: item.level, timestamp: msg.timestamp };
-            });
-            return updated;
-          });
-          // Append new counts to history
-          setHistoryData(prev => {
-            const next = { ...prev };
-            msg.areas.forEach(item => {
-              const arr = [...(prev[item.area_id] || []), item.count];
-              next[item.area_id] = arr.slice(-HISTORY_LEN);
-            });
-            return next;
-          });
-        } catch { /* ignore */ }
-      };
-      ws.onclose = () => { setConnected(false); setTimeout(connectWS, 3000); };
-      ws.onerror = () => ws.close();
-      wsRef.current = ws;
-    }
     fetchAreas();
     fetchRecommendations();
     fetchHistory();
-    connectWS();
+    const areas = setInterval(fetchAreas, 3000);
     const rec  = setInterval(fetchRecommendations, 30000);
     const hist = setInterval(fetchHistory, 60000);   // refresh history every minute
-    return () => { clearInterval(rec); clearInterval(hist); wsRef.current?.close(); };
+    return () => { clearInterval(areas); clearInterval(rec); clearInterval(hist); };
   }, [fetchAreas, fetchRecommendations, fetchHistory]);
 
   return (
