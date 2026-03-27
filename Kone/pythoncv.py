@@ -7,27 +7,20 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from detector import detect_people   
-
+from detector import detect_people
 
 CONFIG_PATH = "cameras_config.json"
-PROCESS_EVERY_N_FRAMES = 5          # run per 5 frames
+PROCESS_EVERY_N_FRAMES = 5
 
-# get info of scource
 def _load_sources(path: str) -> list[dict]:
     with open(path, "r", encoding="utf-8") as f:
         sources = json.load(f)
-
     for src in sources:
         src["roi"] = tuple(src["roi"])
     return sources
 
 SOURCES = _load_sources(CONFIG_PATH)
 
-
-
-
-# { area_id: {"count": int, "latest_frame": bytes | None} }
 _state: dict[str, dict] = {
     src["area_id"]: {"count": 0, "latest_frame": None}
     for src in SOURCES
@@ -36,33 +29,31 @@ _state_lock = threading.Lock()
 
 
 def _run_source(src: dict):
-
-    area_id = src["area_id"]
-    roi     = src["roi"]
-    video   = src["video"]
-    frame_idx = 0             
-
+    area_id   = src["area_id"]
+    roi       = src["roi"]
+    video     = src["video"]
+    frame_idx = 0
 
     cap = cv2.VideoCapture(video)
 
     while True:
         ret, frame = cap.read()
-        if not ret:                        
+        if not ret:
             if isinstance(video, int):
                 print(f"[{area_id}] Camera read failed, retrying...")
                 cap.release()
                 cap = cv2.VideoCapture(video)
                 continue
             else:
-               
                 cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 continue
 
-        frame_idx += 1                                      
-        if frame_idx % PROCESS_EVERY_N_FRAMES != 0:        
-            continue
+        skip = (frame_idx % PROCESS_EVERY_N_FRAMES != 0)
+        count, annotated = detect_people(frame, roi, area_id, skip=skip)
+        frame_idx += 1
 
-        count, annotated = detect_people(frame, roi)
+        if skip:
+            continue
 
         ret2, buf = cv2.imencode(".jpg", annotated)
         jpeg = buf.tobytes() if ret2 else None
@@ -79,8 +70,7 @@ def _frame_generator(area_id: str):
         if jpeg:
             yield (b"--frame\r\n"
                    b"Content-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n")
-
-        time.sleep(0.03)          # sleep when no new frame comes in
+        time.sleep(0.03)
 
 
 app = FastAPI()
