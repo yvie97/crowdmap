@@ -1,36 +1,92 @@
- python3 -m venv venv
+# Project Setup & Running Guide
 
- source venv/bin/activate
+## Prerequisites
 
-pip install opencv-python ultralytics fastapi uvicorn redis httpx
+Make sure you have the following installed on your system:
+- Python 3
+- Node.js & npm
+- Redis (`brew install redis`)
 
+---
 
-brew install redis 
-npm install
-// if needed
+## Installation
 
+### 1. Create and activate a Python virtual environment
 
-// if occupied: kill -9 $(lsof -ti :8001)
-
-* in the first terminal:
-run the program:
-brew services start redis 
-
-* in kone file:
+```bash
+python3 -m venv venv
 source venv/bin/activate
-python3 pythoncv.py 
+```
 
-* in the second terminal:
-* in backend file:
+### 2. Install Python dependencies
+
+```bash
+pip install opencv-python ultralytics fastapi uvicorn redis httpx
+```
+
+### 3. Install Node.js dependencies
+
+```bash
+npm install
+```
+
+---
+
+## Running the Project
+
+Open **three separate terminals** and follow the steps below.
+
+> **Note:** If a port is already in use, free it with:
+> ```bash
+> kill -9 $(lsof -ti :8001)
+> ```
+
+---
+
+### Terminal 1 — Redis Server
+
+```bash
+brew services start redis
+```
+
+Then, inside the `kone` directory:
+
+```bash
+source venv/bin/activate
+python3 pythoncv.py
+```
+
+---
+
+### Terminal 2 — Backend Server
+
+Inside the `backend` directory:
+
+```bash
 source venv/bin/activate
 python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
+```
 
-* in the third termianl
-* in the frontedn file 
+---
+
+### Terminal 3 — Frontend
+
+Inside the `frontend` directory:
+
+```bash
 source venv/bin/activate
 npm start
+```
 
+---
 
-//
-http://localhost:8001/video_feed 看看视频流画面
+## Project Structure
 
+```
+project-root/
+├── kone/           # Computer vision module
+│   └── pythoncv.py
+├── backend/        # FastAPI backend
+│   └── main.py
+└── frontend/       # Frontend application
+```
