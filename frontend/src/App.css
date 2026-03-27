@@ -5,6 +5,7 @@ body {
   background: #ede8df;
   min-height: 100vh;
   color: #1e1208;
+  zoom: 0.9;
 }
 
 .App { min-height: 100vh; display: flex; flex-direction: column; }
@@ -78,6 +79,7 @@ body {
 .content-wrapper {
   flex: 1; padding: 14px 18px 18px;
   display: flex; flex-direction: column; gap: 12px;
+  min-height: 0; overflow: hidden;
 }
 
 /* ── Find Seat Banner ────────────────────────── */
@@ -96,11 +98,11 @@ body {
 /* ── 3-column layout ─────────────────────────── */
 .dashboard-layout {
   display: grid;
-  grid-template-columns: 450px 1fr 450px;
+  grid-template-columns: 22% 1fr 22%;
   gap: 12px;
   align-items: stretch;
-  height: calc(100vh - 155px);
-  min-height: 480px;
+  flex: 1;
+  min-height: 0;
 }
 
 /* ── Side panels ─────────────────────────────── */
