@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from detector import detect_people
 
 CONFIG_PATH = "cameras_config.json"
-PROCESS_EVERY_N_FRAMES = 5
+PROCESS_EVERY_N_FRAMES = 7
 
 def _load_sources(path: str) -> list[dict]:
     with open(path, "r", encoding="utf-8") as f:
