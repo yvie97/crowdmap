@@ -67,3 +67,10 @@ def test_history_valid_area(client):
 def test_history_invalid_area_returns_404(client):
     r = client.get("/api/areas/nonexistent_area/history")
     assert r.status_code == 404
+
+
+def test_viewers_returns_count(client):
+    r = client.get("/api/viewers")
+    assert r.status_code == 200
+    assert "count" in r.json()
+    assert isinstance(r.json()["count"], int)

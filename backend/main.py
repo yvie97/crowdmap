@@ -151,6 +151,12 @@ def recommend():
     return sorted(results, key=lambda x: x["count"])
 
 
+@app.get("/api/viewers")
+def get_viewers():
+    """Returns the number of currently connected WebSocket clients."""
+    return {"count": len(manager.active)}
+
+
 @app.websocket("/ws/density")
 async def websocket_density(ws: WebSocket):
     """WebSocket endpoint for real-time occupancy updates.
