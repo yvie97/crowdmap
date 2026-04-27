@@ -15,6 +15,7 @@ const MAP_MAX_BOUNDS = [[-300, -200], [MAP_HEIGHT + 1200, MAP_WIDTH + 200]];
 const MAP_BG = 'rgb(247, 244, 240)';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000';
+const WS_BASE = API_BASE.replace(/^http/, 'ws');
 const FETCH_HEADERS = { 'ngrok-skip-browser-warning': '1' };
 
 
@@ -315,7 +316,7 @@ function App() {
   const [areaData,       setAreaData]       = useState({});
   const [historyData,    setHistoryData]    = useState({});
   const [recommendations,setRecommendations]= useState([]);
-  const [connected] = useState(false);
+  const [connected, setConnected] = useState(false);
 
   const fetchAreas = useCallback(async () => {
     try {
@@ -382,6 +383,47 @@ function App() {
       setRecommendations(fallback);
     }
   }, [areaData]);
+
+  useEffect(() => {
+    let ws;
+    let reconnectTimer;
+
+    function connect() {
+      ws = new WebSocket(`${WS_BASE}/ws/density`);
+
+      ws.onopen = () => setConnected(true);
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        setAreaData(prev => {
+          const next = { ...prev };
+          msg.areas.forEach(item => {
+            next[item.area_id] = {
+              ...(prev[item.area_id] || {}),
+              count: item.count,
+              level: item.level,
+              timestamp: msg.timestamp,
+            };
+          });
+          return next;
+        });
+      };
+
+      ws.onclose = () => {
+        setConnected(false);
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+
+      ws.onerror = () => ws.close();
+    }
+
+    connect();
+
+    return () => {
+      clearTimeout(reconnectTimer);
+      ws.close();
+    };
+  }, []);
 
   useEffect(() => {
     fetchAreas();

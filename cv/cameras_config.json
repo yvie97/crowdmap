@@ -11,7 +11,7 @@
   },
   {
     "area_id": "area_225_2f_3",
-    "video":   0,
+    "video":   "demo_video01.MOV",
     "roi":     [0, 0, 6000, 6000]
   },
   {
