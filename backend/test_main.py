@@ -51,11 +51,11 @@ def test_areas_level_values(client):
         assert area["level"] in ("low", "medium", "high")
 
 
-def test_recommend_sorted_by_count(client):
+def test_recommend_sorted_by_ratio(client):
     r = client.get("/api/recommend")
     assert r.status_code == 200
-    counts = [a["count"] for a in r.json()]
-    assert counts == sorted(counts)
+    ratios = [a["count"] / a["capacity"] for a in r.json()]
+    assert ratios == sorted(ratios)
 
 
 def test_history_valid_area(client):

@@ -367,6 +367,22 @@ function RightPanel({ areaData, connected, historyData }) {
           Last updated: {lastUpdated ? new Date(lastUpdated * 1000).toLocaleTimeString() : '—'}
         </div>
       </div>
+
+      <div className="panel-card privacy-card">
+        <div className="panel-title">PRIVACY</div>
+        <div className="privacy-item">
+          <span className="privacy-icon">🎥</span>
+          <span className="privacy-text">Video never leaves the device</span>
+        </div>
+        <div className="privacy-item">
+          <span className="privacy-icon">🔢</span>
+          <span className="privacy-text">Only headcounts are transmitted</span>
+        </div>
+        <div className="privacy-item">
+          <span className="privacy-icon">🚫</span>
+          <span className="privacy-text">No facial recognition or tracking</span>
+        </div>
+      </div>
     </div>
   );
 }
