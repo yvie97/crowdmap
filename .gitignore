@@ -6,3 +6,5 @@ venv/
 *.MOV
 *.mov
 *.db
+.vercel
+.env*.local
