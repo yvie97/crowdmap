@@ -467,12 +467,15 @@ function App() {
     e.stopPropagation();
     setShowInfo(false);
     if (!showViewers) {
+      setViewerCount(null);   // reset to show loading state
+      setShowViewers(true);   // show tooltip immediately
       try {
         const res = await fetch(`${API_BASE}/api/viewers`, { headers: FETCH_HEADERS });
         if (res.ok) setViewerCount((await res.json()).count);
       } catch { /* backend unavailable */ }
+    } else {
+      setShowViewers(false);
     }
-    setShowViewers(v => !v);
   }, [showViewers]);
 
   const handleGearClick = useCallback((e) => {
