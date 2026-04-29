@@ -13,6 +13,8 @@ Run:
 
 import time
 import random
+import datetime
+from zoneinfo import ZoneInfo
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -74,8 +76,8 @@ def _get_count(area_id: str) -> int:
     params   = AREA_PARAMS[area_id]
     capacity = AREAS[area_id]["capacity"]
 
-    lt   = time.localtime()
-    hour = lt.tm_hour + lt.tm_min / 60.0 + lt.tm_sec / 3600.0
+    now  = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))
+    hour = now.hour + now.minute / 60.0 + now.second / 3600.0
 
     # Building closed 22:00 – 07:00
     if hour >= 22.0 or hour < 7.0:
